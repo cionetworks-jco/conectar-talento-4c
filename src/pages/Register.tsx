@@ -13,10 +13,11 @@ export default function Register() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password || !confirmPassword) {
       toast.error('Por favor completa todos los campos');
@@ -30,8 +31,12 @@ export default function Register() {
       toast.error('La contraseña debe tener al menos 6 caracteres');
       return;
     }
-    const success = register(email, password);
-    if (success) {
+    setLoading(true);
+    const { error } = await register(email, password, name);
+    setLoading(false);
+    if (error) {
+      toast.error(error);
+    } else {
       toast.success('¡Cuenta creada exitosamente!');
       navigate('/perfil');
     }
@@ -67,7 +72,9 @@ export default function Register() {
                 <Label htmlFor="confirmPassword">Confirmar contraseña</Label>
                 <Input id="confirmPassword" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repite tu contraseña" />
               </div>
-              <Button type="submit" className="w-full">Crear Cuenta</Button>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+              </Button>
             </form>
             <div className="mt-4 text-center text-sm text-muted-foreground">
               ¿Ya tienes cuenta?{' '}

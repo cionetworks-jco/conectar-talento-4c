@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
-import { User } from '@/types';
-import { mockUsers } from '@/data/mockData';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => boolean;
-  logout: () => void;
-  register: (email: string, password: string) => boolean;
+  session: Session | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ error: string | null }>;
+  logout: () => Promise<void>;
+  register: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>;
   isAuthenticated: boolean;
 }
 
@@ -14,29 +16,45 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email: string, _password: string): boolean => {
-    const found = mockUsers.find(u => u.email === email);
-    if (found) {
-      setUser(found);
-      return true;
-    }
-    // Demo: any email/password works
-    const demoUser: User = { id: 'demo', email, role: 'user', isActive: true, createdAt: new Date().toISOString() };
-    setUser(demoUser);
-    return true;
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error?.message ?? null };
   };
 
-  const logout = () => setUser(null);
+  const logout = async () => {
+    await supabase.auth.signOut();
+  };
 
-  const register = (email: string, _password: string): boolean => {
-    const demoUser: User = { id: 'new-' + Date.now(), email, role: 'user', isActive: true, createdAt: new Date().toISOString() };
-    setUser(demoUser);
-    return true;
+  const register = async (email: string, password: string, fullName: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName } },
+    });
+    return { error: error?.message ?? null };
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, register, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, session, loading, login, logout, register, isAuthenticated: !!session }}>
       {children}
     </AuthContext.Provider>
   );
