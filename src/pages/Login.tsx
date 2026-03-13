@@ -11,21 +11,24 @@ import Header from '@/components/Header';
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error('Por favor completa todos los campos');
       return;
     }
-    const success = login(email, password);
-    if (success) {
+    setLoading(true);
+    const { error } = await login(email, password);
+    setLoading(false);
+    if (error) {
+      toast.error(error);
+    } else {
       toast.success('¡Bienvenido!');
       navigate('/dashboard');
-    } else {
-      toast.error('Credenciales inválidas');
     }
   };
 
@@ -51,15 +54,14 @@ export default function Login() {
                 <Label htmlFor="password">Contraseña</Label>
                 <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
               </div>
-              <Button type="submit" className="w-full">Iniciar Sesión</Button>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? 'Ingresando...' : 'Iniciar Sesión'}
+              </Button>
             </form>
             <div className="mt-4 text-center text-sm text-muted-foreground">
               ¿No tienes cuenta?{' '}
               <Link to="/registro" className="text-accent hover:underline font-medium">Regístrate aquí</Link>
             </div>
-            <p className="mt-3 text-center text-xs text-muted-foreground">
-              Demo: usa cualquier email y contraseña para acceder.
-            </p>
           </CardContent>
         </Card>
       </div>

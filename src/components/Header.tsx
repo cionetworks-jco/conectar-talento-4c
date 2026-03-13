@@ -5,13 +5,13 @@ import { LogOut, Menu, User, LayoutDashboard, Search, X } from 'lucide-react';
 import { useState } from 'react';
 
 export default function Header() {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/');
   };
 
@@ -37,7 +37,6 @@ export default function Header() {
           Directorio Pro
         </Link>
 
-        {/* Desktop nav */}
         <nav className="hidden items-center gap-1 md:flex">
           {navItems.map(item => (
             <Link
@@ -56,14 +55,14 @@ export default function Header() {
         </nav>
 
         <div className="hidden items-center gap-2 md:flex">
-          {isAuthenticated ? (
+          {!loading && isAuthenticated ? (
             <>
               <span className="text-sm text-muted-foreground">{user?.email}</span>
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="mr-1 h-4 w-4" /> Salir
               </Button>
             </>
-          ) : (
+          ) : !loading ? (
             <>
               <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
                 Iniciar Sesión
@@ -72,16 +71,14 @@ export default function Header() {
                 Registrarse
               </Button>
             </>
-          )}
+          ) : null}
         </div>
 
-        {/* Mobile toggle */}
         <button className="md:hidden" onClick={() => setMobileOpen(!mobileOpen)}>
           {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       {mobileOpen && (
         <div className="border-t border-border bg-card p-4 md:hidden">
           <nav className="flex flex-col gap-2">

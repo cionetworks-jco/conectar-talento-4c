@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
-import { mockProfiles, getTopSkill, getLatestEducation, getLatestCertification } from '@/data/mockData';
+import { useDirectory, getTopSkill, getLatestEducation, getLatestCertification } from '@/hooks/useDirectory';
 import SearchFilters from '@/components/SearchFilters';
 import ConsultantCard from '@/components/ConsultantCard';
 import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
-import { ArrowUpDown, Grid3X3, List, Users } from 'lucide-react';
+import { ArrowUpDown, Grid3X3, List, Users, Loader2 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -15,41 +15,35 @@ type ViewMode = 'cards' | 'table';
 const emptyFilters = { country: '', skill: '', educationLevel: '', searchText: '' };
 
 export default function Directory() {
+  const { profiles, loading } = useDirectory();
   const [filters, setFilters] = useState(emptyFilters);
   const [sortKey, setSortKey] = useState<SortKey>('name');
   const [sortAsc, setSortAsc] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   const filtered = useMemo(() => {
-    let results = [...mockProfiles];
+    let results = [...profiles];
 
-    if (filters.country) {
-      results = results.filter(p => p.country === filters.country);
-    }
-    if (filters.skill) {
-      results = results.filter(p => p.skills.some(s => s.skillName === filters.skill));
-    }
-    if (filters.educationLevel) {
-      results = results.filter(p => p.education.some(e => e.type === filters.educationLevel));
-    }
+    if (filters.country) results = results.filter(p => p.country === filters.country);
+    if (filters.skill) results = results.filter(p => p.skills.some(s => s.skill_name === filters.skill));
+    if (filters.educationLevel) results = results.filter(p => p.education.some(e => e.type === filters.educationLevel));
     if (filters.searchText) {
       const q = filters.searchText.toLowerCase();
       results = results.filter(p =>
-        p.fullName.toLowerCase().includes(q) ||
+        p.full_name.toLowerCase().includes(q) ||
         p.biography.toLowerCase().includes(q) ||
         p.projects.some(pr => pr.description.toLowerCase().includes(q))
       );
     }
 
-    // Sort
     const getSortValue = (p: typeof results[0]): string => {
       switch (sortKey) {
-        case 'name': return p.fullName;
+        case 'name': return p.full_name;
         case 'country': return p.country;
         case 'skill': return getTopSkill(p);
         case 'education': return getLatestEducation(p);
         case 'certification': return getLatestCertification(p);
-        default: return p.fullName;
+        default: return p.full_name;
       }
     };
 
@@ -60,7 +54,7 @@ export default function Directory() {
     });
 
     return results;
-  }, [filters, sortKey, sortAsc]);
+  }, [profiles, filters, sortKey, sortAsc]);
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortAsc(!sortAsc);
@@ -68,14 +62,22 @@ export default function Directory() {
   };
 
   const SortButton = ({ label, sKey }: { label: string; sKey: SortKey }) => (
-    <button
-      onClick={() => toggleSort(sKey)}
-      className="flex items-center gap-1 font-medium hover:text-accent transition-colors"
-    >
+    <button onClick={() => toggleSort(sKey)} className="flex items-center gap-1 font-medium hover:text-accent transition-colors">
       {label}
       <ArrowUpDown className={`h-3.5 w-3.5 ${sortKey === sKey ? 'text-accent' : 'text-muted-foreground'}`} />
     </button>
   );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container py-16 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -90,18 +92,10 @@ export default function Directory() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant={viewMode === 'table' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('table')}
-            >
+            <Button variant={viewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('table')}>
               <List className="h-4 w-4" />
             </Button>
-            <Button
-              variant={viewMode === 'cards' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('cards')}
-            >
+            <Button variant={viewMode === 'cards' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('cards')}>
               <Grid3X3 className="h-4 w-4" />
             </Button>
           </div>
@@ -131,13 +125,13 @@ export default function Directory() {
                         <TableCell>
                           <Link to={`/consultor/${p.id}`}>
                             <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm">
-                              {p.fullName.split(' ').map(n => n[0]).slice(0, 2).join('')}
+                              {p.full_name.split(' ').map(n => n[0]).slice(0, 2).join('')}
                             </div>
                           </Link>
                         </TableCell>
                         <TableCell>
                           <Link to={`/consultor/${p.id}`} className="font-medium text-foreground hover:text-accent">
-                            {p.fullName}
+                            {p.full_name}
                           </Link>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{p.country}</TableCell>
